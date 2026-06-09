@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest tests/test_comps_engine.py tests/test_scenario_analysis.py -v)",
+      "Bash(python -m pytest tests/ -v --tb=short)",
+      "Bash(python -m pytest tests/ -q)",
+      "Bash(python main.py --help)",
+      "Bash(python -m pytest tests/test_assumption_tracker.py tests/test_report_generator.py -v)",
+      "Bash(python -m pytest tests/ -x -q)",
+      "Bash(python -c \"import plotly; print\\(plotly.__version__\\)\")",
+      "Bash(python -c ' *)"
+    ]
+  }
+}
