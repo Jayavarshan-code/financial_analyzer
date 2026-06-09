@@ -25,7 +25,7 @@ from core.financial_statements import FinancialStatementAnalyzer
 from core.scenario_analysis import ScenarioAnalyzer
 from data.models.dcf import DCFAssumptions, WACCInputs
 from data.models.financials import FullFinancialHistory
-from data.models.scenario import MonteCarloConfig
+from data.models.scenario import MonteCarloConfig, ScenarioDelta
 
 # ── page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -106,10 +106,22 @@ def _run_comps(subject: str, peers: list[str]) -> object:
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def _run_scenario(ticker: str, run_mc: bool, mc_n: int) -> object:
+def _run_scenario(
+    ticker: str,
+    run_mc: bool,
+    mc_n: int,
+    bull_growth: float = 0.03,
+    bull_margin: float = 0.02,
+    bear_growth: float = -0.03,
+    bear_margin: float = -0.02,
+) -> object:
     history = _fetch_history(ticker)
     mc = MonteCarloConfig(n_simulations=mc_n, seed=42) if run_mc else None
-    return ScenarioAnalyzer().run(history, mc_config=mc)
+    bull = ScenarioDelta(growth_delta=bull_growth, margin_delta=bull_margin,
+                         wacc_delta=-0.005, tgr_delta=+0.0025)
+    bear = ScenarioDelta(growth_delta=bear_growth, margin_delta=bear_margin,
+                         wacc_delta=+0.005, tgr_delta=-0.0025)
+    return ScenarioAnalyzer().run(history, mc_config=mc, bull_delta=bull, bear_delta=bear)
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -159,6 +171,26 @@ def _sidebar() -> dict:
     mc_n = st.sidebar.slider("Simulations", 500, 5000, 1000, step=500,
                               disabled=not run_mc)
 
+    with st.sidebar.expander("Custom Bull / Bear Inputs"):
+        st.caption("Override the default ±3 pp growth / ±2 pp margin shifts.")
+        bull_growth = st.number_input(
+            "Bull: revenue growth shift (pp)", min_value=-10.0, max_value=20.0,
+            value=3.0, step=0.5,
+            help="Added to every projection year's growth rate in the bull case.",
+        ) / 100
+        bull_margin = st.number_input(
+            "Bull: EBITDA margin shift (pp)", min_value=-10.0, max_value=20.0,
+            value=2.0, step=0.5,
+        ) / 100
+        bear_growth = st.number_input(
+            "Bear: revenue growth shift (pp)", min_value=-20.0, max_value=10.0,
+            value=-3.0, step=0.5,
+        ) / 100
+        bear_margin = st.number_input(
+            "Bear: EBITDA margin shift (pp)", min_value=-20.0, max_value=10.0,
+            value=-2.0, step=0.5,
+        ) / 100
+
     st.sidebar.markdown("---")
     run_btn = st.sidebar.button("Run Analysis", type="primary", use_container_width=True)
 
@@ -167,6 +199,8 @@ def _sidebar() -> dict:
         wacc_override=wacc_override, tgr=tgr_pct / 100,
         proj_years=proj_years,
         run_mc=run_mc, mc_n=mc_n,
+        bull_growth=bull_growth, bull_margin=bull_margin,
+        bear_growth=bear_growth, bear_margin=bear_margin,
         run_btn=run_btn,
     )
 
@@ -698,7 +732,11 @@ def main() -> None:
                 st.write("Running scenario analysis…")
                 try:
                     scenario_result = _run_scenario(
-                        cfg["ticker"], cfg["run_mc"], cfg["mc_n"]
+                        cfg["ticker"], cfg["run_mc"], cfg["mc_n"],
+                        bull_growth=cfg["bull_growth"],
+                        bull_margin=cfg["bull_margin"],
+                        bear_growth=cfg["bear_growth"],
+                        bear_margin=cfg["bear_margin"],
                     )
                 except Exception as e:
                     st.warning(f"Scenario skipped: {e}")

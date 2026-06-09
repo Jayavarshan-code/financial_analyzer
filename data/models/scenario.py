@@ -31,6 +31,49 @@ from data.models.dcf import DCFAssumptions, DCFResult
 
 
 # ---------------------------------------------------------------------------
+# Scenario driver deltas
+# ---------------------------------------------------------------------------
+
+class ScenarioDelta(BaseModel):
+    """
+    Signed shifts applied to the auto-derived base DCFAssumptions for one
+    scenario.  All values are in decimal form.
+
+    Examples
+    --------
+    Bull case (aggressive):
+        ScenarioDelta(growth_delta=0.05, margin_delta=0.03,
+                      wacc_delta=-0.01, tgr_delta=0.005)
+
+    Bear case (credit-crunch):
+        ScenarioDelta(growth_delta=-0.05, margin_delta=-0.04,
+                      wacc_delta=+0.015, tgr_delta=-0.005)
+
+    Clipping applied inside the engine:
+        revenue_growth → [-30%, +50%]   ebitda_margin → [1%, 80%]
+        WACC           → [4%,  30%]     tgr           → [0%,  5%]
+    WACC > tgr is enforced by pulling tgr down 0.5 pp if needed.
+    """
+
+    growth_delta: float = Field(
+        0.0,
+        description="Revenue growth rate shift applied to every projection year (decimal, e.g. 0.03 = +3 pp)",
+    )
+    margin_delta: float = Field(
+        0.0,
+        description="EBITDA margin shift (decimal, e.g. 0.02 = +2 pp)",
+    )
+    wacc_delta: float = Field(
+        0.0,
+        description="Effective WACC shift (decimal, e.g. -0.005 = -50 bp)",
+    )
+    tgr_delta: float = Field(
+        0.0,
+        description="Terminal growth rate shift (decimal, e.g. 0.0025 = +25 bp)",
+    )
+
+
+# ---------------------------------------------------------------------------
 # Scenario definitions
 # ---------------------------------------------------------------------------
 
