@@ -34,7 +34,7 @@ Public API:
 
 from __future__ import annotations
 
-import statistics
+import numpy as np
 from typing import Optional
 
 from data.models.comps import (
@@ -65,28 +65,21 @@ def _stats(values: list[Optional[float]], name: str) -> MultipleStats:
     Compute descriptive statistics for one multiple across the peer set.
 
     Only positive, non-None values are included.
-    Percentiles use the nearest-rank method (no interpolation) to avoid
-    requiring numpy as a hard dependency at this layer.
     """
-    valid = sorted(v for v in values if v is not None and v > 0)
+    valid = np.array([v for v in values if v is not None and v > 0], dtype=float)
     n = len(valid)
     if n == 0:
         return MultipleStats(multiple_name=name, n_valid=0)
 
-    mean_val = statistics.mean(valid)
-    median_val = statistics.median(valid)
-    p25 = valid[max(0, int(n * 0.25) - 1)] if n >= 4 else valid[0]
-    p75 = valid[min(n - 1, int(n * 0.75))] if n >= 4 else valid[-1]
-
     return MultipleStats(
         multiple_name=name,
         n_valid=n,
-        mean=mean_val,
-        median=median_val,
-        p25=p25,
-        p75=p75,
-        minimum=valid[0],
-        maximum=valid[-1],
+        mean=float(np.mean(valid)),
+        median=float(np.median(valid)),
+        p25=float(np.percentile(valid, 25)),
+        p75=float(np.percentile(valid, 75)),
+        minimum=float(np.min(valid)),
+        maximum=float(np.max(valid)),
     )
 
 
